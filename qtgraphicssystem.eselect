@@ -1,0 +1,105 @@
+# -*-eselect-*-  vim: ft=eselect
+# Copyright 2005-2012 Gentoo Foundation
+# Distributed under the terms of the GNU GPL version 2 or later
+# $Id: qtgraphicssystem.eselect 859 2012-01-21 11:04:25Z wired $
+
+DESCRIPTION="Manage the system-wide active Qt Graphics System"
+MAINTAINER="qt@gentoo.org"
+
+find_targets() {
+	if [[ -d ${EROOT}/usr/share/qt4/graphicssystems/ ]]; then
+		echo $(ls ${EROOT}/usr/share/qt4/graphicssystems/)
+	fi
+}
+
+### show action ###
+
+describe_show() {
+	echo "Show the active Qt Graphics System" 
+}
+
+do_show() {
+	write_list_start "Active Qt Graphics System:"
+	if [[ -e ${EROOT}/etc/env.d/44qt4-graphicssystem ]]; then
+		. ${EROOT}/etc/env.d/44qt4-graphicssystem
+		write_kv_list_entry "${QT_GRAPHICSSYSTEM}" ""
+	else
+		write_kv_list_entry "(unset)" ""
+	fi
+}
+
+### list action ###
+
+describe_list() {
+	echo "List available Qt Graphics Systems"
+}
+
+do_list() {
+	local i targets=( $(find_targets) )
+
+	local active=
+	if [[ -e ${EROOT}/etc/env.d/44qt4-graphicssystem ]]; then
+		. ${EROOT}/etc/env.d/44qt4-graphicssystem
+		active="${QT_GRAPHICSSYSTEM}"
+	fi
+
+	write_list_start "Available Qt Graphics Systems:"
+	for (( i = 0; i < ${#targets[@]}; i++ )); do
+		[[ ${targets[i]} = ${active} ]] &&
+			targets[i]=$(highlight_marker "${targets[i]}")
+	done
+	write_numbered_list -m "(none found)" "${targets[@]}"
+}
+
+### set action ###
+
+describe_set() {
+	echo "Set the active Qt Graphics System"
+}
+
+describe_set_parameters() {
+	echo "<target>"
+}
+
+describe_set_options() {
+	echo "target : Target name or number (from 'list' action)"
+}
+
+do_set() {
+	local use_old=0
+	[[ -z $1 ]] && die -q "You didn't tell me what Qt Graphics System to activate."
+	if [[ $# -eq 2 ]] && [[ $2 == "--use-old" ]]; then
+		use_old=1
+	else
+		[[ $# -gt 1 ]] && die -q "Too many parameters."
+	fi
+
+	if [[ -e ${EROOT}/etc/env.d/44qt4-graphicssystem ]] && (( $use_old )); then
+		. ${EROOT}/etc/env.d/44qt4-graphicssystem
+		if [[ -e ${EROOT}/usr/share/qt4/graphicssystems/${QT_GRAPHICSSYSTEM} ]]; then
+			echo "Qt Graphics System set to ${QT_GRAPHICSSYSTEM}."
+			return
+		fi
+	fi
+
+	local target=$1
+	if is_number "${target}"; then
+		local targets=( $(find_targets) )
+		target=${targets[target-1]}
+	fi
+
+	if [[ -z ${target} ]] || [[ ! -e ${EROOT}/usr/share/qt4/graphicssystems/${target} ]]; then
+		die -q "You didn't select a valid Qt Graphics System"
+	fi
+
+	echo -n "Setting ${target} as your active Qt Graphics System... "
+
+	if [[ -e ${EROOT}/etc/env.d/44qt4-graphicssystem ]]; then
+		rm -f ${EROOT}/etc/env.d/44qt4-graphicssystem || die -q "Could not remove ${EROOT}/etc/env.d/44qt4-graphicssystem"
+	fi
+	echo "QT_GRAPHICSSYSTEM=\"${target}\"" > ${EROOT}/etc/env.d/44qt4-graphicssystem ||
+		die -q "Could not install new ${EROOT}/etc/env.d/44qt4-graphicssystem"
+	do_action env update &> /dev/null
+	echo "done"
+	echo "Please logout for changes to take effect."
+}
