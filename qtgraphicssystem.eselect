@@ -5,11 +5,16 @@
 
 DESCRIPTION="Manage the system-wide active Qt Graphics System"
 MAINTAINER="qt@gentoo.org"
+VERSION="1.1"
 
 find_targets() {
 	if [[ -d ${EROOT}/usr/share/qt4/graphicssystems/ ]]; then
 		echo $(ls ${EROOT}/usr/share/qt4/graphicssystems/)
 	fi
+}
+
+get_target_state() {
+	cat ${EROOT}/usr/share/qt4/graphicssystems/$1
 }
 
 ### show action ###
@@ -45,7 +50,10 @@ do_list() {
 
 	write_list_start "Available Qt Graphics Systems:"
 	for (( i = 0; i < ${#targets[@]}; i++ )); do
-		[[ ${targets[i]} = ${active} ]] &&
+		local name=${targets[i]}
+		local state=$(get_target_state ${targets[i]})
+		[[ -n ${state} ]] && targets[i]="${targets[i]} (${state})"
+		[[ ${name} = ${active} ]] &&
 			targets[i]=$(highlight_marker "${targets[i]}")
 	done
 	write_numbered_list -m "(none found)" "${targets[@]}"
