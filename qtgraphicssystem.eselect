@@ -7,12 +7,19 @@ DESCRIPTION="Manage the system-wide active Qt Graphics System"
 MAINTAINER="qt@gentoo.org"
 VERSION="1.1"
 
+# this module sets the system-wide qt graphics system by creating an env file
+# called 44qt4-graphicssystem that contains a QT_GRAPHICSSYSTEM variable with
+# the active graphics system.
+
+# get all the available qt graphics systems
 find_targets() {
 	if [[ -d ${EROOT}/usr/share/qt4/graphicssystems/ ]]; then
 		echo $(ls ${EROOT}/usr/share/qt4/graphicssystems/)
 	fi
 }
 
+# get the state of one graphic system
+# the state (if any) is stored in its file
 get_target_state() {
 	cat ${EROOT}/usr/share/qt4/graphicssystems/$1
 }
@@ -25,6 +32,8 @@ describe_show() {
 
 do_show() {
 	write_list_start "Active Qt Graphics System:"
+
+	# get the active graphics system by sourcing the env file
 	if [[ -e ${EROOT}/etc/env.d/44qt4-graphicssystem ]]; then
 		. ${EROOT}/etc/env.d/44qt4-graphicssystem
 		write_kv_list_entry "${QT_GRAPHICSSYSTEM}" ""
@@ -42,6 +51,7 @@ describe_list() {
 do_list() {
 	local i targets=( $(find_targets) )
 
+	# get the active graphics system by sourcing the env file
 	local active=
 	if [[ -e ${EROOT}/etc/env.d/44qt4-graphicssystem ]]; then
 		. ${EROOT}/etc/env.d/44qt4-graphicssystem
@@ -82,6 +92,7 @@ do_set() {
 		[[ $# -gt 1 ]] && die -q "Too many parameters."
 	fi
 
+	# if --use-old and a graphics system is already set, don't do anything
 	if [[ -e ${EROOT}/etc/env.d/44qt4-graphicssystem ]] && (( $use_old )); then
 		. ${EROOT}/etc/env.d/44qt4-graphicssystem
 		if [[ -e ${EROOT}/usr/share/qt4/graphicssystems/${QT_GRAPHICSSYSTEM} ]]; then
@@ -96,15 +107,19 @@ do_set() {
 		target=${targets[target-1]}
 	fi
 
+	# check that the selected graphics system actually exists
 	if [[ -z ${target} ]] || [[ ! -e ${EROOT}/usr/share/qt4/graphicssystems/${target} ]]; then
 		die -q "You didn't select a valid Qt Graphics System"
 	fi
 
 	echo -n "Setting ${target} as your active Qt Graphics System... "
 
+	# get rid of the old setting
 	if [[ -e ${EROOT}/etc/env.d/44qt4-graphicssystem ]]; then
 		rm -f ${EROOT}/etc/env.d/44qt4-graphicssystem || die -q "Could not remove ${EROOT}/etc/env.d/44qt4-graphicssystem"
 	fi
+
+	# write a new env file containing QT_GRAPHICSSYSTEM
 	echo "QT_GRAPHICSSYSTEM=\"${target}\"" > ${EROOT}/etc/env.d/44qt4-graphicssystem ||
 		die -q "Could not install new ${EROOT}/etc/env.d/44qt4-graphicssystem"
 	do_action env update &> /dev/null
