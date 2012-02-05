@@ -5,7 +5,7 @@
 
 DESCRIPTION="Manage the system-wide active Qt Graphics System"
 MAINTAINER="qt@gentoo.org"
-VERSION="1.1"
+VERSION="1.1.1"
 
 # this module sets the system-wide qt graphics system by creating an env file
 # called 44qt4-graphicssystem that contains a QT_GRAPHICSSYSTEM variable with
@@ -112,7 +112,10 @@ do_set() {
 		die -q "You didn't select a valid Qt Graphics System"
 	fi
 
-	echo -n "Setting ${target} as your active Qt Graphics System... "
+	local state=$(get_target_state ${target})
+	[[ -n ${state} ]] && state=" (${state})"
+
+	echo -n "Setting ${target}${state} as your active Qt Graphics System... "
 
 	# get rid of the old setting
 	if [[ -e ${EROOT}/etc/env.d/44qt4-graphicssystem ]]; then
